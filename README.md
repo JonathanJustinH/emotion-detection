@@ -16,5 +16,5 @@ A streamlit web application for facial emotion detection using CNN and OpenCV
 
 ## Deployment
 
-Deployed using streamlit
-emotion-detection-ai.streamlit.app
+Deployed using streamlit:
+[emotion-detection-ai.streamlit.app](https://emotion-detection-ai.streamlit.app)
