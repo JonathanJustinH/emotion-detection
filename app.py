@@ -33,69 +33,49 @@ def predict_emotion(face_img):
     return EMOTIONS[emotion_idx], confidence
 
 st.title("Facial Emotion Detection")
-st.write("Upload an image or use your webcam to detect facial emotions")
+st.write("Upload an image or take a photo to detect facial emotions")
 
 option = st.radio(
     "Choose input method:",
-    ["Upload Image", "Live Webcam"]
+    ["Upload image from device", "Upload image from camera"]
 )
 
-# UI
-if option == "Upload Image":
-    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+def detect_and_display(img_bgr):
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
+    if len(faces) == 0:
+        st.warning("No faces detected in the image.")
+        st.image(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+        return
+
+    for (x, y, w, h) in faces:
+        face = img_bgr[y:y+h, x:x+w]
+        emotion, conf = predict_emotion(face)
+        text = f"{emotion} ({conf*100:.2f}%)"
+
+        font_scale = max(0.5, w / 200)
+        thickness = max(1, int(w / 150))
+        rect_thickness = max(2, int(w / 100))
+
+        cv2.rectangle(img_bgr, (x, y), (x + w, y + h), (0, 255, 0), rect_thickness)
+        cv2.putText(img_bgr, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
+
+    st.image(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+
+# UI
+if option == "Upload image from device":
+    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
     if uploaded_file:
         image = Image.open(uploaded_file).convert("RGB")
         img_np = np.array(image)
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
-        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        detect_and_display(img_bgr)
 
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
-        for (x, y, w, h) in faces:
-            face = img_bgr[y:y+h, x:x+w]
-            emotion, conf = predict_emotion(face)
-            text = f"{emotion} ({conf*100:.2f}%)"
-
-            font_scale = max(0.5, w / 200)
-            thickness = max(1, int(w / 150))
-            rect_thickness = max(2, int(w / 100))
-
-            cv2.rectangle(img_bgr, (x, y), (x + w, y + h), (0, 255, 0), rect_thickness)
-            cv2.putText(img_bgr, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
-
-        st.image(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
-
-elif option == "Live Webcam":
-    st.warning("Click Start Webcam and allow camera access")
-
-    run = st.checkbox("Start Webcam")
-    FRAME_WINDOW = st.image([])
-
-    if run:
-        cap = cv2.VideoCapture(0)
-
-        while run:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("Failed to access webcam")
-                break
-
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
-            for (x, y, w, h) in faces:
-                face = frame[y:y+h, x:x+w]
-                emotion, conf = predict_emotion(face)
-                text = f"{emotion} ({conf*100:.2f}%)"
-
-                font_scale = max(0.5, w / 200)
-                thickness = max(1, int(w / 150))
-                rect_thickness = max(2, int(w / 100))
-
-                cv2.rectangle( frame, (x, y), (x + w, y + h), (0, 255, 0), rect_thickness)
-                cv2.putText(frame, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
-
-            FRAME_WINDOW.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
-        cap.release()
+elif option == "Upload image from camera":
+    img_file = st.camera_input("Take a picture")
+    if img_file:
+        image = Image.open(img_file).convert("RGB")
+        img_np = np.array(image)
+        img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        detect_and_display(img_bgr)
