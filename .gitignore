@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+emotion_cnn_final.h5
+*.csv
