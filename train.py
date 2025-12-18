@@ -8,6 +8,11 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 
+from sklearn.metrics import classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
 CSV_PATH = "fer2013.csv"
 IMG_SIZE = 48
 NUM_CLASSES = 7
@@ -28,8 +33,13 @@ X = X / 255.0
 
 y = to_categorical(df['emotion'], NUM_CLASSES)
 
-X_train, X_val, y_train, y_val = train_test_split(
+X_train, X_temp, y_train, y_temp = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=df['emotion']
+)
+
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.5, random_state=42,
+    stratify=np.argmax(y_temp, axis=1)
 )
 
 print("Train:", X_train.shape, "Validation:", X_val.shape)
@@ -109,3 +119,58 @@ history = model.fit(
 
 model.save("emotion_cnn_final.h5")
 print("Training complete. Model saved.")
+
+
+print("\nEvaluating on TEST set...")
+
+# Evaluation
+y_test_pred_prob = model.predict(X_test)
+y_test_pred = np.argmax(y_test_pred_prob, axis=1)
+y_test_true = np.argmax(y_test, axis=1)
+
+emotion_labels = [
+    "Angry", "Disgust", "Fear", "Happy",
+    "Sad", "Surprise", "Neutral"
+]
+
+print("\nClassification Report:")
+print(classification_report(
+    y_test_true,
+    y_test_pred,
+    target_names=emotion_labels
+))
+
+
+cm = confusion_matrix(y_test_true, y_test_pred)
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=emotion_labels,
+    yticklabels=emotion_labels
+)
+plt.xlabel("Predicted")
+plt.ylabel("True")
+plt.title("Confusion Matrix - Test Set")
+plt.show()
+
+plt.figure()
+plt.plot(history.history["accuracy"], label="Train Accuracy")
+plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training vs Validation Accuracy")
+plt.legend()
+plt.show()
+
+plt.figure()
+plt.plot(history.history["loss"], label="Train Loss")
+plt.plot(history.history["val_loss"], label="Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.show()
